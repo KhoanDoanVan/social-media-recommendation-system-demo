@@ -10,5 +10,5 @@ import Foundation
 
 struct PostWrapper<T> {
     let model: T
-    var score: Double
+    var score: Double?
 }

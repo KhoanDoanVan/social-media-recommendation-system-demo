@@ -11,31 +11,41 @@ import SwiftyJSON
 
 final class PostService {
     
-    static func fetchPosts(completion: @escaping ([Post]) -> Void) {
+    static func fetchPosts(
+        lastCursorPost: String?,
+        pageSize: Int,
+        completion: @escaping ([Post], [String]) -> Void
+    ) {
         
         Firestore.firestore()
             .collection("posts")
-            .getDocuments { snapshot, error in
+            .getDocuments {
+                snapshot,
+                error in
                 
                 if let error {
                     print("Fetch Posts Failed: \(error.localizedDescription)")
-                    completion([])
+                    completion([], [])
                     return
                 }
                 
                 guard let documents = snapshot?.documents else {
                     print("❌ Fetch Documents Posts Failed")
-                    completion([])
+                    completion([], [])
                     return
                 }
                 
-                var posts: [Post] = []
                 let dispatchGroup = DispatchGroup()
+                
+                var posts: [Post] = []
+                var uniqueTags: Set<String> = []
                 
                 for document in documents {
                     
                     let json = JSON(document.data())
                     var post = Post(json: json)
+                    
+                    uniqueTags.formUnion(post.tags)
                     
                     dispatchGroup.enter()
                     
@@ -48,7 +58,10 @@ final class PostService {
                 }
                 
                 dispatchGroup.notify(queue: .main) {
-                    completion(posts)
+                    completion(
+                        posts,
+                        Array(uniqueTags)
+                    )
                 }
                 
             }
