@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseFirestore
+import Firebase
 
 final class HomeVM: ObservableObject {
     
@@ -19,8 +20,9 @@ final class HomeVM: ObservableObject {
     @Published var isFetchPosts: Bool = false
     
     /// Pagination
-    private var pageSize: Int = 5
+    private var pageSize: Int = 3
     private var lastCursorPost: DocumentSnapshot? = nil
+    private var isHasMorePosts: Bool = true
     
     // MARK: - Methods
     /// Fetch Users
@@ -42,21 +44,32 @@ final class HomeVM: ObservableObject {
     /// Fetch Posts
     public func fetchPosts() {
         
+        guard !isFetchPosts,
+              isHasMorePosts
+        else { return }
+        
         self.isFetchPosts = true
         
         PostService.fetchPosts(
-            lastCursorPost: lastCursorPost?.documentID,
+            lastCursorPost: self.lastCursorPost,
             pageSize: self.pageSize
-        ) { [weak self] posts, tags in
+        ) { [weak self] posts, tags, lastDocumentPost in
             
             print("🏷️ Tags: \(tags)")
-                        
-            DispatchQueue.main.async { [weak self] in
-                self?.posts = posts
-                self?.allPosts = posts.map {
-                    PostWrapper(model: $0)
+            print("👹 LastPosts: \(posts)")
+            
+            if posts.isEmpty {
+                self?.isHasMorePosts = false /// No more posts for get
+            } else {
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastCursorPost = lastDocumentPost
+                    self?.posts.append(contentsOf: posts)
+                    self?.allPosts.append(contentsOf: posts.map { PostWrapper(model: $0) })
+                    
+                    self?.isFetchPosts = false
                 }
-                self?.isFetchPosts = false
+                
             }
             
         }

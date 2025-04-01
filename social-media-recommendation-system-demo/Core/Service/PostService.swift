@@ -8,63 +8,92 @@
 import Foundation
 import FirebaseFirestore
 import SwiftyJSON
+import Firebase
 
 final class PostService {
     
     static func fetchPosts(
-        lastCursorPost: String?,
+        lastCursorPost: DocumentSnapshot?,
         pageSize: Int,
-        completion: @escaping ([Post], [String]) -> Void
+        completion: @escaping (
+            [Post],
+            [String],
+            DocumentSnapshot?
+        ) -> Void
     ) {
         
-        Firestore.firestore()
-            .collection("posts")
-            .getDocuments {
-                snapshot,
-                error in
+    
+        let query: Query
+
+        if let lastPost = lastCursorPost {
+            query = Firestore.firestore()
+                .collection("posts")
+                .order(by: "id")
+                .start(afterDocument: lastPost)
+                .limit(to: pageSize)
+        } else {
+            query = Firestore.firestore()
+                .collection("posts")
+                .order(by: "id")
+                .limit(to: pageSize)
+        }
+        
+        if let lastPost = lastCursorPost {
+            query.start(afterDocument: lastPost)
+        }
+        
+        query.getDocuments {
+            snapshot,
+            error in
+            
+            if let error {
+                print("Fetch Posts Failed: \(error.localizedDescription)")
+                completion([], [], nil)
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                print("❌ Fetch Documents Posts Failed")
+                completion([], [], nil)
+                return
+            }
+            
+            let dispatchGroup = DispatchGroup()
+            
+            var posts: [Post] = []
+            var uniqueTags: Set<String> = []
+            
+            for document in documents {
                 
-                if let error {
-                    print("Fetch Posts Failed: \(error.localizedDescription)")
-                    completion([], [])
-                    return
-                }
+                let json = JSON(document.data())
+                var post = Post(json: json)
                 
-                guard let documents = snapshot?.documents else {
-                    print("❌ Fetch Documents Posts Failed")
-                    completion([], [])
-                    return
-                }
+                uniqueTags.formUnion(post.tags)
                 
-                let dispatchGroup = DispatchGroup()
+                dispatchGroup.enter()
                 
-                var posts: [Post] = []
-                var uniqueTags: Set<String> = []
-                
-                for document in documents {
-                    
-                    let json = JSON(document.data())
-                    var post = Post(json: json)
-                    
-                    uniqueTags.formUnion(post.tags)
-                    
-                    dispatchGroup.enter()
-                    
-                    UserService.fetchUserById(with: json["author"].stringValue, completion: { user in
-                        post.author = user
-                        posts.append(post)
-                        dispatchGroup.leave()
-                    })
-                    
-                }
-                
-                dispatchGroup.notify(queue: .main) {
-                    completion(
-                        posts,
-                        Array(uniqueTags)
-                    )
-                }
+                UserService.fetchUserById(
+                    with: json["author"].stringValue,
+                    completion: { user in
+                    post.author = user
+                    posts.append(post)
+                    dispatchGroup.leave()
+                })
                 
             }
+            
+            dispatchGroup.notify(queue: .main) {
+                
+                let lastSnapshot = documents.last
+                                
+                completion(
+                    posts,
+                    Array(uniqueTags),
+                    lastSnapshot
+                )
+            }
+            
+        }
         
     }
     

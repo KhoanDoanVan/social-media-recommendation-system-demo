@@ -94,6 +94,7 @@ struct Home: View {
                 }
                 .frame(width: 80, height: 110)
                 
+                
                 if !vm.users.isEmpty {
                     
                     ForEach(vm.users) { user in
@@ -139,18 +140,19 @@ struct Home: View {
     /// List post
     var listPost: some View {
         
-        ScrollView(.vertical, showsIndicators: false) {
+        ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 15) {
                 
                 listStory
                 
-                if !vm.isFetchPosts {
-                    ForEach(vm.posts, id: \.id) { post in
-                        cardPost(post: post)
-                    }
-                } else {
-                    ProgressView()
+                ForEach(vm.posts, id: \.id) { post in
+                    cardPost(post: post)
                 }
+                
+                ProgressView()
+                    .onAppear {
+                        vm.fetchPosts()
+                    }
                 
             }
         }
