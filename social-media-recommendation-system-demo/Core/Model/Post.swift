@@ -24,6 +24,12 @@ struct Post: Decodable, Identifiable {
         case trees
     }
     
+    /// Interaction user
+    var isLiked: Bool
+    var isCommented: Bool
+    var isShared: Bool
+    var isBookmarked: Bool
+    
     init(json: JSON) {
         
         self.id = json["id"].stringValue
@@ -37,6 +43,12 @@ struct Post: Decodable, Identifiable {
         } else {
             self.author = nil
         }
+        
+        /// Interaction user
+        self.isLiked = json["isLiked"].boolValue
+        self.isCommented = json["isCommented"].boolValue
+        self.isShared = json["isShared"].boolValue
+        self.isBookmarked = json["isBookmarked"].boolValue
     }
     
 }

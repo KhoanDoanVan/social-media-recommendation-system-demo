@@ -7,12 +7,14 @@
 
 import TabularData
 import Foundation
-
+#if canImport(CreateML)
+import CreateML
+#endif
 
 final class RecommendationStore {
     
     private func dataFrame(
-        for data: [PostWrapper<Post>],
+        for wrapperData: [PostWrapper],
         with allTags: [String]
     ) -> DataFrame {
         
@@ -22,12 +24,13 @@ final class RecommendationStore {
         dataFrame.append(
             column: Column(
                 name: "category",
-                contents: data.map(\.model.category.rawValue)
+                contents: wrapperData.map(\.model.category.rawValue)
             )
         )
         
+        
         /// Tags
-        let tagVectors = data.map {
+        let tagVectors = wrapperData.map {
             UtilFunction.tagsToVector(tags: $0.model.tags, allTags: allTags)
         }
         
@@ -45,6 +48,45 @@ final class RecommendationStore {
             )
         }
         
+        /// Like
+        dataFrame.append(
+            column: Column(
+                name: "like",
+                contents: wrapperData.map { $0.model.isLiked ? 1 : 0 }
+            )
+        )
+        
+        /// Comment
+        dataFrame.append(
+            column: Column(
+                name: "comment",
+                contents: wrapperData.map { $0.model.isCommented ? 1 : 0 }
+            )
+        )
+        
+        /// Share
+        dataFrame.append(
+            column: Column(
+                name: "share",
+                contents: wrapperData.map { $0.model.isShared ? 1 : 0 }
+            )
+        )
+        
+        /// Bookmark
+        dataFrame.append(
+            column: Column(
+                name: "bookmark",
+                contents: wrapperData.map { $0.model.isBookmarked ? 1 : 0 }
+            )
+        )
+        
+        /// Score (Output:  label)
+        dataFrame.append(
+            column: Column(
+                name: "score",
+                contents: wrapperData.map { $0.score ?? 0.0 }
+            )
+        )
         
         return dataFrame
     }

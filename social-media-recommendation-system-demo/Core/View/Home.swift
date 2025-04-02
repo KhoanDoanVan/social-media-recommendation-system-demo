@@ -203,16 +203,38 @@ struct Home: View {
             HStack(spacing: 0) {
                 
                 HStack(spacing: 10) {
-                    Image(systemName: "heart")
                     
-                    Image(systemName: "message")
+                    Button {
+                        
+                    } label: {
+                        Image(systemName: "heart")
+                            .foregroundStyle(Color.black)
+                    }
                     
-                    Image(systemName: "paperplane")
+                    Button {
+                        
+                    } label: {
+                        Image(systemName: "message")
+                            .foregroundStyle(Color.black)
+                    }
+                    
+                    Button {
+                        
+                    } label: {
+                        Image(systemName: "paperplane")
+                            .foregroundStyle(Color.black)
+                    }
+                    
                 }
                 
                 Spacer()
                 
-                Image(systemName: "bookmark")
+                Button {
+                    
+                } label: {
+                    Image(systemName: "bookmark")
+                        .foregroundStyle(Color.black)
+                }
                 
             }
             .font(.system(size: 20))

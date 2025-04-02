@@ -14,7 +14,7 @@ final class HomeVM: ObservableObject {
     // MARK: - Properties
     @Published var users: [User] = []
     @Published var posts: [Post] = []
-    @Published var allPosts: [PostWrapper<Post>] = []
+    @Published var allPosts: [PostWrapper] = []
     
     @Published var isFetchUsers: Bool = false
     @Published var isFetchPosts: Bool = false
@@ -54,10 +54,7 @@ final class HomeVM: ObservableObject {
             lastCursorPost: self.lastCursorPost,
             pageSize: self.pageSize
         ) { [weak self] posts, tags, lastDocumentPost in
-            
-            print("🏷️ Tags: \(tags)")
-            print("👹 LastPosts: \(posts)")
-            
+
             if posts.isEmpty {
                 self?.isHasMorePosts = false /// No more posts for get
             } else {
