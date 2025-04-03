@@ -12,6 +12,11 @@ struct Home: View {
     
     @StateObject private var vm = HomeVM()
     
+    @State private var likeBounce = false
+    @State private var commentBounce = false
+    @State private var shareBounce = false
+    @State private var bookmarkBounce = false
+    
     var body: some View {
         
         NavigationStack {
@@ -145,7 +150,7 @@ struct Home: View {
                 
                 listStory
                 
-                ForEach(vm.posts, id: \.id) { post in
+                ForEach(vm.postsFetch, id: \.id) { post in
                     cardPost(post: post)
                 }
                 
@@ -204,36 +209,36 @@ struct Home: View {
                 
                 HStack(spacing: 10) {
                     
-                    Button {
-                        
-                    } label: {
-                        Image(systemName: "heart")
-                            .foregroundStyle(Color.black)
+                    BounceButton(
+                        systemImage: post.isLiked ? "heart.fill" : "heart",
+                        color: post.isLiked ? .red : .black
+                    ) {
+                        vm.actionPost(with: post, .like)
                     }
                     
-                    Button {
-                        
-                    } label: {
-                        Image(systemName: "message")
-                            .foregroundStyle(Color.black)
+                    BounceButton(
+                        systemImage: post.isCommented ? "message.fill" : "message",
+                        color: post.isCommented ? .blue : .black
+                    ) {
+                        vm.actionPost(with: post, .comment)
                     }
                     
-                    Button {
-                        
-                    } label: {
-                        Image(systemName: "paperplane")
-                            .foregroundStyle(Color.black)
+                    BounceButton(
+                        systemImage: post.isShared ? "paperplane.fill" : "paperplane",
+                        color: post.isShared ? .purple : .black
+                    ) {
+                        vm.actionPost(with: post, .share)
                     }
                     
                 }
                 
                 Spacer()
                 
-                Button {
-                    
-                } label: {
-                    Image(systemName: "bookmark")
-                        .foregroundStyle(Color.black)
+                BounceButton(
+                    systemImage: post.isBookmarked ? "bookmark.fill" : "bookmark",
+                    color: post.isBookmarked ? .yellow : .black
+                ) {
+                    vm.actionPost(with: post, .bookmark)
                 }
                 
             }
@@ -256,6 +261,30 @@ struct Home: View {
         )
         .padding(.horizontal, 15)
         .shadow(color: .black.opacity(0.1), radius: 2, x: 2, y: 2)
+    }
+}
+
+struct BounceButton: View {
+    let systemImage: String
+    let color: Color
+    let action: () -> Void
+    
+    @State private var isBouncing = false
+    
+    var body: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0)) {
+                isBouncing = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isBouncing = false
+            }
+            action()
+        } label: {
+            Image(systemName: systemImage)
+                .foregroundStyle(color)
+                .scaleEffect(isBouncing ? 1.2 : 1.0)
+        }
     }
 }
 

@@ -13,6 +13,20 @@ import CreateML
 
 final class RecommendationStore {
     
+    /// Queue
+    private let queue = DispatchQueue (
+        label: "com.social-media-recommendation-service.queue",
+        qos: .userInitiated
+    )
+    
+    /// COMPUTE RECOMMENDATION
+//    func computeRecommendationPosts(
+//        basedOn posts: [PostWrapper]
+//    ) async throws -> [Post] {
+//        
+//    }
+    
+    /// DATA FRAME
     private func dataFrame(
         for wrapperData: [PostWrapper],
         with allTags: [String]

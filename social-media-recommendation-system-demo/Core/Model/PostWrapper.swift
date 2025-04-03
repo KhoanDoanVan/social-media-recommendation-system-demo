@@ -9,7 +9,7 @@ import Foundation
 
 
 struct PostWrapper {
-    let model: Post
+    var model: Post
     var score: Double?
     
     mutating func calculateScore() {
@@ -25,7 +25,7 @@ struct PostWrapper {
         (model.isBookmarked ? bookmarkWeight : 0)
         
         
-        self.score = score
+        self.score = score > 0 ? score : 0
     }
     
 }
