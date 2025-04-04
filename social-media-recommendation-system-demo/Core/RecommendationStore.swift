@@ -20,11 +20,83 @@ final class RecommendationStore {
     )
     
     /// COMPUTE RECOMMENDATION
-//    func computeRecommendationPosts(
-//        basedOn posts: [PostWrapper]
-//    ) async throws -> [Post] {
-//        
-//    }
+    func computeRecommendationPosts(
+        postsAnalysis: [PostWrapper],
+        postsInteracted: [PostWrapper],
+        allTags: [String],
+        topScore: Int
+    ) async throws -> [Post] {
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            
+            queue.async { [weak self] in
+                
+                guard let self else { return }
+                
+                #if targetEnvironment(simulator)
+                continuation.resume(
+                    throwing: NSError(
+                        domain: "Simulator not supported",
+                        code: -1
+                    )
+                )
+                
+                #else
+                
+                /// Data Frame interacted
+                let trainingDataFrameInteracted = self.dataFrame(for: postsInteracted, with: allTags)
+                
+                /// Data Frame Analysis
+                let testDataFrameAnalysis = self.dataFrame(for: postsAnalysis, with: allTags)
+                
+                do {
+                    
+                    // MARK: - FIXING HERE
+                    /// Regressor for train
+                    let regresssor = try MLLinearRegressor(
+                        trainingData: trainingDataFrameInteracted,
+                        targetColumn: "score"
+                    )
+                    
+                    /// Predict scores for posts analysis
+                    let predictions = (
+                        try regresssor.predictions(
+                            from: testDataFrameAnalysis
+                        ))
+                        .compactMap { value in
+                            value as? Double
+                        }
+                    
+                    /// Rank posts by score
+                    let sorted = zip(
+                            postsAnalysis,
+                            predictions
+                        )
+                        .sorted {
+                            $0.1 > $1.1
+                        }
+                        .prefix(topScore)
+                    
+                    /// Print each post's score
+                    print("Post Scores After Prediction:")
+                    for (postWrapper, score) in sorted {
+                        print("Post ID: \(postWrapper.model.id), Score: \(score)")
+                    }
+                    
+                    /// Result
+                    let result = sorted.map(\.0.model)
+                    continuation.resume(returning: result)
+                    
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+                
+                #endif
+            }
+            
+        }
+        
+    }
     
     /// DATA FRAME
     private func dataFrame(

@@ -30,10 +30,10 @@ struct Home: View {
             .padding(.vertical, 15)
             .background(
                 LinearGradient(gradient: Gradient(stops: [
-                    .init(color: Color.cyan.opacity(0.1), location: 0.0),
+                    .init(color: Color.cyan.opacity(0.25), location: 0.0),
                     .init(color: Color.white, location: 0.2),
                     .init(color: Color.white, location: 0.8),
-                    .init(color: Color.indigo.opacity(0.1), location: 1.0)
+                    .init(color: Color.indigo.opacity(0.25), location: 1.0)
                 ]), startPoint: .leading, endPoint: .trailing)
             )
             .onAppear {
@@ -253,6 +253,15 @@ struct Home: View {
                     .foregroundStyle(Color.gray)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 5) {
+                ForEach(post.tags, id: \.self) { tag in
+                    Text("#\(tag)")
+                        .foregroundStyle(Color.gray.opacity(0.5))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, -5)
         }
         .padding()
         .background(Color.white)

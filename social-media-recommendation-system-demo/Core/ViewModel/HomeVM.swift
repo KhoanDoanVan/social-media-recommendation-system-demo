@@ -29,9 +29,17 @@ final class HomeVM: ObservableObject {
     @Published var isFetchPosts: Bool = false
     
     /// Pagination
-    private var pageSize: Int = 3
+    private var pageSize: Int = 5
     private var lastCursorPost: DocumentSnapshot? = nil
     private var isHasMorePosts: Bool = true
+    
+    /// Recommnedation
+    private let recommendationStore: RecommendationStore
+    
+    // MARK: - Init
+    init(recommendationStore: RecommendationStore = RecommendationStore()) {
+        self.recommendationStore = recommendationStore
+    }
     
     // MARK: - Methods
     /// Fetch Users
@@ -40,12 +48,10 @@ final class HomeVM: ObservableObject {
         self.isFetchUsers = true
         
         UserService.fetchUsers { [weak self] users in
-                        
             DispatchQueue.main.async { [weak self] in
                 self?.users = users
                 self?.isFetchUsers = false
             }
-            
         }
         
     }
@@ -62,20 +68,58 @@ final class HomeVM: ObservableObject {
         PostService.fetchPosts(
             lastCursorPost: self.lastCursorPost,
             pageSize: self.pageSize
-        ) { [weak self] posts, tags, lastDocumentPost in
+        ) {
+            [weak self] posts,
+            tags,
+            lastDocumentPost in
+            
+            Task {
 
-            if posts.isEmpty {
-                self?.isHasMorePosts = false /// No more posts for get
-            } else {
-                
-                DispatchQueue.main.async { [weak self] in
-                    self?.lastCursorPost = lastDocumentPost
-                    self?.postsFetch.append(contentsOf: posts)
+                do {
+                    let postsWrapper = posts.map{ PostWrapper(model: $0) }
+                    let postsForAnalysis = (self?.allPostsWillAnalysis ?? []) + postsWrapper
                     
+                    let postsPotential = try await self?.recommendationStore.computeRecommendationPosts(
+                        postsAnalysis: postsForAnalysis,
+                        postsInteracted: self?.allPostsUserInteracted ?? [],
+                        allTags: tags,
+                        topScore: 3
+                    )
                     
-                    self?.allPostsWillAnalysis.append(contentsOf: posts.map { PostWrapper(model: $0) })
+                    /// Post UI
+                    if let postsPotential,
+                       !postsPotential.isEmpty
+                    {
+                        DispatchQueue.main.async { [weak self] in
+                            self?.lastCursorPost = lastDocumentPost
+                            
+                            /// Post Fetch
+                            self?.postsFetch.append(contentsOf: postsPotential)
+                            
+                            self?.isFetchPosts = false
+                        }
+                        
+                        self?.allPostsWillAnalysis = []
+                        
+                        /// Update posts will analysis from posts don't recommendation
+                        for post in postsPotential {
+                            
+                            for postAnalysis in postsForAnalysis {
+                                
+                                if post.id != postAnalysis.model.id {
+                                    self?.allPostsWillAnalysis.append(postAnalysis)
+                                }
+                                
+                            }
+                            
+                        }
+                        
+                    } else {
+                        self?.isHasMorePosts = false /// No more posts for get
+                    }
                     
-                    self?.isFetchPosts = false
+                } catch {
+                    print("Error: \(error)")
                 }
                 
             }
@@ -102,19 +146,19 @@ final class HomeVM: ObservableObject {
             self.activeOrRemoveActiveActionPost(
                 post: post,
                 action: .comment,
-                state: post.isLiked ? false : true
+                state: post.isCommented ? false : true
             )
         case .share:
             self.activeOrRemoveActiveActionPost(
                 post: post,
                 action: .share,
-                state: post.isLiked ? false : true
+                state: post.isShared ? false : true
             )
         case .bookmark:
             self.activeOrRemoveActiveActionPost(
                 post: post,
                 action: .bookmark,
-                state: post.isLiked ? false : true
+                state: post.isBookmarked ? false : true
             )
         }
                
@@ -145,21 +189,21 @@ final class HomeVM: ObservableObject {
         // MARK: Case Not Exist in Post Interacted
         else {
             
-            var newPostAnalysis = PostWrapper(model: post)
+            var newPostInteracted = PostWrapper(model: post)
             
             switch action {
             case .like:
-                newPostAnalysis.model.isLiked = true
+                newPostInteracted.model.isLiked = true
             case .comment:
-                newPostAnalysis.model.isCommented = true
+                newPostInteracted.model.isCommented = true
             case .share:
-                newPostAnalysis.model.isShared = true
+                newPostInteracted.model.isShared = true
             case .bookmark:
-                newPostAnalysis.model.isBookmarked = true
+                newPostInteracted.model.isBookmarked = true
             }
             
             /// Add to post interacted
-            self.allPostsUserInteracted.append(newPostAnalysis)
+            self.allPostsUserInteracted.append(newPostInteracted)
         }
     }
     
