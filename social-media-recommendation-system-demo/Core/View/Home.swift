@@ -30,10 +30,10 @@ struct Home: View {
             .padding(.vertical, 15)
             .background(
                 LinearGradient(gradient: Gradient(stops: [
-                    .init(color: Color.cyan.opacity(0.25), location: 0.0),
+                    .init(color: Color.cyan.opacity(0.1), location: 0.0),
                     .init(color: Color.white, location: 0.2),
                     .init(color: Color.white, location: 0.8),
-                    .init(color: Color.indigo.opacity(0.25), location: 1.0)
+                    .init(color: Color.indigo.opacity(0.1), location: 1.0)
                 ]), startPoint: .leading, endPoint: .trailing)
             )
             .onAppear {
@@ -94,6 +94,7 @@ struct Home: View {
                     }
                     Spacer()
                     Text("You")
+                        .foregroundStyle(Color.black)
                         .font(.system(size: 18))
                     
                 }
@@ -124,6 +125,7 @@ struct Home: View {
                             }
                             Spacer()
                             Text(user.username)
+                                .foregroundStyle(Color.black)
                                 .font(.system(size: 16))
                             
                         }
@@ -180,6 +182,7 @@ struct Home: View {
                         )
                     
                     Text(post.author?.username ?? "unknown")
+                        .foregroundStyle(Color.black)
                         .bold()
                     
                     if let isFamous = post.author?.isFamous,
@@ -246,6 +249,7 @@ struct Home: View {
             
             HStack(spacing: 10) {
                 Text(post.author?.username ?? "unknown")
+                    .foregroundStyle(Color.black)
                     .bold()
                 
                 Text(post.content)

@@ -56,7 +56,88 @@ final class HomeVM: ObservableObject {
         
     }
     
+    
     /// Fetch Posts
+    
+//    public func fetchPosts() {
+//        guard !isFetchPosts, isHasMorePosts else { return }
+//        
+//        self.isFetchPosts = true
+//        
+//        PostService.fetchPosts(
+//            lastCursorPost: self.lastCursorPost,
+//            pageSize: self.pageSize
+//        ) { [weak self] posts, tags, lastDocumentPost in
+//            if self?.lastCursorPost == nil {
+//                self?.allPostsWillAnalysis = posts.map { PostWrapper(model: $0) }
+//                self?.lastCursorPost = lastDocumentPost
+//                self?.postsFetch = posts
+//                self?.isFetchPosts = false
+//            } else {
+//                Task {
+//                    do {
+//                        let postsWrapper = posts.map { PostWrapper(model: $0) }
+//                        let postsForAnalysis = (self?.allPostsWillAnalysis ?? []) + postsWrapper
+//                        
+//                        print("🔫 allPostsWillAnalysis: \(postsForAnalysis)")
+////                        print("🔫 allPostsUserInteracted (before scoring): \(self?.allPostsUserInteracted)")
+//                        print("Second Fetch - allTags: \(tags)")
+//                        
+//                        let postsPotential: [Post]
+//                        if let interacted = self?.allPostsUserInteracted, !interacted.isEmpty {
+//                            // Tính score cho interacted posts
+//                            var scoredInteracted = interacted
+//                            for i in 0..<scoredInteracted.count {
+//                                scoredInteracted[i].calculateScore()
+//                            }
+//                            
+//                            print("🔫 allPostsUserInteracted (after scoring): \(scoredInteracted)")
+//                            
+//                            // Luôn chạy recommendation, không cần kiểm tra variance
+//                            postsPotential = try await self?.recommendationStore.computeRecommendationPosts(
+//                                postsAnalysis: postsForAnalysis,
+//                                postsInteracted: scoredInteracted,
+//                                allTags: tags,
+//                                topScore: 3
+//                            ) ?? postsForAnalysis.prefix(3).map(\.model) // Fallback nếu ML lỗi
+//                        } else {
+//                            print("No interacted posts yet, using raw posts (limited to 3)")
+//                            postsPotential = Array(posts.prefix(3))
+//                        }
+//                        
+//                        if !postsPotential.isEmpty {
+//                            DispatchQueue.main.async { [weak self] in
+//                                self?.lastCursorPost = lastDocumentPost
+//                                self?.postsFetch.append(contentsOf: postsPotential) // Tối đa 3
+//                                self?.isFetchPosts = false
+//                            }
+//                            
+//                            DispatchQueue.main.async { [weak self] in
+//                                self?.allPostsWillAnalysis = []
+//                            }
+//                            
+//                            for post in postsPotential {
+//                                for postAnalysis in postsForAnalysis {
+//                                    if post.id != postAnalysis.model.id {
+//                                        
+//                                        DispatchQueue.main.async { [weak self] in
+//                                            self?.allPostsWillAnalysis.append(postAnalysis)
+//                                        }
+//                                        
+//                                    }
+//                                }
+//                            }
+//                        } else {
+//                            self?.isHasMorePosts = false
+//                        }
+//                    } catch {
+//                        print("Error: \(error)")
+//                    }
+//                }
+//            }
+//        }
+//    }
+    
     public func fetchPosts() {
         
         guard !isFetchPosts,
@@ -73,55 +154,72 @@ final class HomeVM: ObservableObject {
             tags,
             lastDocumentPost in
             
-            Task {
+            if self?.lastCursorPost == nil {
+                
+                self?.allPostsWillAnalysis = posts.map {
+                    PostWrapper(model: $0)
+                }
+                
+                self?.lastCursorPost = lastDocumentPost
+                self?.postsFetch = posts
+                
+                self?.isFetchPosts = false
+                
+            } else {
+                Task {
 
-                do {
-                    let postsWrapper = posts.map{ PostWrapper(model: $0) }
-                    let postsForAnalysis = (self?.allPostsWillAnalysis ?? []) + postsWrapper
-                    
-                    let postsPotential = try await self?.recommendationStore.computeRecommendationPosts(
-                        postsAnalysis: postsForAnalysis,
-                        postsInteracted: self?.allPostsUserInteracted ?? [],
-                        allTags: tags,
-                        topScore: 3
-                    )
-                    
-                    /// Post UI
-                    if let postsPotential,
-                       !postsPotential.isEmpty
-                    {
-                        DispatchQueue.main.async { [weak self] in
-                            self?.lastCursorPost = lastDocumentPost
-                            
-                            /// Post Fetch
-                            self?.postsFetch.append(contentsOf: postsPotential)
-                            
-                            self?.isFetchPosts = false
-                        }
+                    do {
+                        let postsWrapper = posts.map{ PostWrapper(model: $0) }
+                        let postsForAnalysis = (self?.allPostsWillAnalysis ?? []) + postsWrapper
                         
-                        self?.allPostsWillAnalysis = []
+                        print("🔫 allPostsWillAnalysis: \(postsForAnalysis)")
+                        print("🔫 allPostsUserInteracted: \(self?.allPostsUserInteracted)")
+                        print("Second Fetch - allTags: \(tags)")
                         
-                        /// Update posts will analysis from posts don't recommendation
-                        for post in postsPotential {
-                            
-                            for postAnalysis in postsForAnalysis {
+                        let postsPotential = try await self?.recommendationStore.computeRecommendationPosts(
+                            postsAnalysis: postsForAnalysis,
+                            postsInteracted: self?.allPostsUserInteracted ?? [],
+                            allTags: tags,
+                            topScore: 3
+                        )
+                        
+                        /// Post UI
+                        if let postsPotential,
+                           !postsPotential.isEmpty
+                        {
+                            DispatchQueue.main.async { [weak self] in
+                                self?.lastCursorPost = lastDocumentPost
                                 
-                                if post.id != postAnalysis.model.id {
-                                    self?.allPostsWillAnalysis.append(postAnalysis)
+                                /// Post Fetch
+                                self?.postsFetch.append(contentsOf: postsPotential)
+                                
+                                self?.isFetchPosts = false
+                            }
+                            
+                            self?.allPostsWillAnalysis = []
+                            
+                            /// Update posts will analysis from posts don't recommendation
+                            for post in postsPotential {
+                                
+                                for postAnalysis in postsForAnalysis {
+                                    
+                                    if post.id != postAnalysis.model.id {
+                                        self?.allPostsWillAnalysis.append(postAnalysis)
+                                    }
+                                    
                                 }
                                 
                             }
                             
+                        } else {
+                            self?.isHasMorePosts = false /// No more posts for get
                         }
                         
-                    } else {
-                        self?.isHasMorePosts = false /// No more posts for get
+                    } catch {
+                        print("Error: \(error)")
                     }
                     
-                } catch {
-                    print("Error: \(error)")
                 }
-                
             }
             
         }
@@ -178,6 +276,8 @@ final class HomeVM: ObservableObject {
                 self.allPostsUserInteracted[indexPostInteracted].model.isBookmarked = false
             }
             
+            self.allPostsUserInteracted[indexPostInteracted].calculateScore()
+            
             let post = self.allPostsUserInteracted[indexPostInteracted].model
             
             if !self.anotherPropertyStillExsits(action, post) {
@@ -202,8 +302,20 @@ final class HomeVM: ObservableObject {
                 newPostInteracted.model.isBookmarked = true
             }
             
+            newPostInteracted.calculateScore()
+            
             /// Add to post interacted
             self.allPostsUserInteracted.append(newPostInteracted)
+            
+            
+            /// Remove post from post will analysis
+            guard let indexPost = self.allPostsWillAnalysis.firstIndex(where: {
+                $0.model.id == post.id
+            }) else {
+                print("❌ index for remove allPostsWillAnalysis not exists")
+                return
+            }
+            self.allPostsWillAnalysis.remove(at: indexPost)
         }
     }
     
